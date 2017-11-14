@@ -1,0 +1,54 @@
+{% extends "charge/_layout" %}
+{% block content %}
+
+<form class="form-horizontal" id="charge-form" method="post" action="" accept-charset="UTF-8" data-publicKey="{{ craft.charge.getPublicKey }}">
+  {{ forms.hidden({ name : 'action', value: 'charge/charge' }) }}
+  {{ getCsrfInput() }}
+
+  {% set options = {
+    'planChoiceDefault': 'basic',
+    'planChoices' : {
+
+    {% for entry in craft.entries.section('services') %}
+    '{{entry.slug}}' : {
+      'label': '{{entry.title}} Plan - ${{entry.planCost}} / {{entry.planRecurrence}}',
+      'planAmount' : {{entry.planCost}},
+      'planInterval' : '{{entry.planRecurrence}}',
+      'planIntervalCount' : 1,
+      'actions' : {
+        'onSuccess': {
+          'subscription' : '{{entry.slug}}-membership'
+        },
+      }
+    },
+    {% endfor %}
+
+    }
+  } %}
+  {{ craft.charge.setPaymentOptions(options) }}
+
+  {% if allErrors is defined %}
+    {{ forms.errorBlock(allErrors) }}
+  {% endif %}
+
+  <div id="payment-errors" class="alert alert-error"></div>
+
+  <h4>Customer Details</h4>
+  {% include 'charge/_includes/inputs/customerDetails' %}
+
+  <h4>Plan Details</h4>
+  {{ forms.radioGroupField({
+    label: 'Plan Choice',
+    name: 'planChoice',
+    id: 'planChoice',
+    options: options.planChoices,
+    value: (charge is defined ? charge.planChoice),
+    errors: (charge is defined ? charge.getErrors('planChoice'))
+  }) }}
+
+  <h4>Card Details</h4>
+  {% include 'charge/_includes/inputs/cardDetails' %}
+  {% include 'charge/_includes/inputs/paymentButton' %}
+</form>
+
+{% endblock %}
